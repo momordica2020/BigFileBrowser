@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using Mozilla.NUniversalCharDet;
+using System.Text.RegularExpressions;
+using BigFileBrowser.Properties;
 
 namespace BigFileBrowser
 {
@@ -19,6 +21,8 @@ namespace BigFileBrowser
             InitializeComponent();
             comboBox1.SelectedIndex = 0;
         }
+        
+
 
         string filepath = "";
         long filelen = 1;
@@ -77,37 +81,170 @@ namespace BigFileBrowser
             this.filepath = path;
             label1.Text = "文件名：" + path;
             getFileLen(path);
-            read(filelen / 1000 * trackBar1.Value);
+            trackBar1.Maximum = (int)Math.Floor((double)(filelen / int.Parse(numericUpDown1.Value.ToString())));
+            trackBar1.Value = 0;
+            getEncodingAuto();
+            read();            
         }
 
-        private void read(long beginindex)
+
+        public static int GetHanNum(string str)
+        {
+            int count = 0;
+            Regex regex = new Regex(@"^[\u4E00-\u9FA5]{0,}$");
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (regex.IsMatch(str[i].ToString()))
+                {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        /// <summary>
+        /// 常见汉字个数
+        /// </summary>
+        /// <param name="str"></param>
+        /// <returns></returns>
+        private int getCommonHanNum(string str)
+        {
+            int count = 0;
+
+            foreach(char c in str)
+            {
+                if (Resources.commonChineseWords.Contains(c)) count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// 根据字节转化为对应的字符串，并且避免（多字节码的）截断。
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <returns></returns>
+        private string byteToString(byte[] buffer)
+        {
+            int len = int.Parse(numericUpDown1.Value.ToString());
+            string res = "";
+            int begin = 0;
+            int end = buffer.Length;
+            if (encoding == Encoding.UTF8)
+            {
+                // 首个多字节符号头
+                for (int i = 0; i < buffer.Length; i++)
+                {
+                    if (buffer[i] >= 192 || buffer[i] < 128)   // 多字节utf-8的首字节或英文字母
+                    {
+                        begin = i;
+                        break;
+                    }
+                }
+                // 最后的多字节符号头（仅检查尾部2字节的余量）
+                for (int i = buffer.Length - 1; i > buffer.Length - 3; i--)
+                {
+                    if (buffer[i] >= 192 || buffer[i] < 128)   // 多字节utf-8的首字节或英文字母
+                    {
+                        end = i;
+                        break;
+                    }
+                }
+            }else if(encoding== Encoding.GetEncoding("gb2312"))
+            {
+                int firstASCII = -1;
+                int lastASCII = -1;
+                for(int i = 0; i < buffer.Length; i++)
+                {
+                    if(buffer[i] <= 128)
+                    {
+                        if (firstASCII < 0) firstASCII = i;
+                        lastASCII = i;
+                    }
+                }
+                if (firstASCII < 0)
+                {
+                    // no ASCII
+                    // 选取常见字更多的那一种情况视为正确分割
+                    byte[] tmp1 = new byte[buffer.Length - 1];
+                    Array.Copy(buffer, 1, tmp1, 0, tmp1.Length);
+                   
+                    if (getCommonHanNum(encoding.GetString(tmp1)) > getCommonHanNum(encoding.GetString(buffer)))
+                    {
+                        begin = 1;
+                        end = end - 1;
+                    }
+                }
+                else
+                {
+                    // have ASCII
+                    // 两侧如果不是偶数长度，则必有截断。
+                    if (firstASCII % 2 != 0) begin = 1;
+                    if ((buffer.Length - lastASCII + 1) % 2 != 0) end = end - 1;
+                }
+                // 防止余量2字节以上，造成重复
+                if (end -1 > len) end -= 2;
+            }
+            // 防止余量的字节是ASCII码字符时，造成重复
+            if (end> len && buffer[end] <= 128) end -= 1;
+
+            byte[] buf1 = new byte[end - begin];
+            Array.Copy(buffer, begin, buf1, 0, buf1.Length);
+            res = encoding.GetString(buf1);
+            return res;
+        }
+
+        private void getEncodingAuto()
+        {
+            byte[] test= readByte(0, long.Parse(numericUpDown1.Value.ToString()));
+            int selectindex = 0;
+            int maxhannum = -1;
+            for(int i = 0; i < comboBox1.Items.Count; i++)
+            {
+                string str = Encoding.GetEncoding(comboBox1.Items[i].ToString()).GetString(test);
+                int thishannum = getCommonHanNum(str);
+                if (maxhannum < thishannum)
+                {
+                    maxhannum = thishannum;
+                    selectindex = i;
+                }
+            }
+            this.comboBox1.SelectedIndex = selectindex;
+            
+        }
+
+        private byte[] readByte(long begin,long len)
+        {
+            byte[] buffer = new byte[len];
+            using (FileStream fs = File.Open(filepath, FileMode.Open))
+            {
+                fs.Seek(begin, SeekOrigin.Begin);
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    int read = fs.Read(buffer, 0, buffer.Length);
+                }
+            }
+            return buffer;
+        }
+
+        private void read()
         {
             try
             {
+                long beginindex = long.Parse(numericUpDown1.Value.ToString()) * trackBar1.Value;
                 //Encoding encoding = Encoding.GetEncoding(getEncoding(filepath).BodyName);
-                using (FileStream fs = File.Open(filepath, FileMode.Open))
-                {
-                    fs.Seek(beginindex, SeekOrigin.Begin);
 
-                    int len = int.Parse(numericUpDown1.Value.ToString());
-                    byte[] buffer = new byte[len];
-                    using (MemoryStream ms = new MemoryStream())
-                    {
+                int len = int.Parse(numericUpDown1.Value.ToString());
+                len += 2;   // 后都多取 2 字符，检查是否有汉字截断
+                beginindex = beginindex < 0 ? 0 : beginindex;
 
-                        int read = fs.Read(buffer,0, buffer.Length);
-                        ms.Write(buffer, 0, read);
-                        string res = encoding.GetString(ms.ToArray());
-                        textBox1.Text = res;
-                    }
-                }
-
+                byte[] buffer = readByte(beginindex, len);
+                textBox1.Text = byteToString(buffer);
             }
-            catch
+            catch (Exception e)
             {
 
             }
-
-
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -122,7 +259,7 @@ namespace BigFileBrowser
 
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
-            read(filelen / 1000* trackBar1.Value );
+            read( );
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -138,7 +275,7 @@ namespace BigFileBrowser
                 default:
                     break;
             }
-            read(filelen / 1000 * trackBar1.Value);
+            read( );
         }
 
         private void Form1_Shown(object sender, EventArgs e)

@@ -53,6 +53,9 @@
             // 
             // textBox1
             // 
+            this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.textBox1.CausesValidation = false;
+            this.textBox1.HideSelection = false;
             this.textBox1.Location = new System.Drawing.Point(13, 116);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
@@ -60,6 +63,7 @@
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBox1.Size = new System.Drawing.Size(886, 354);
             this.textBox1.TabIndex = 1;
+            this.textBox1.TabStop = false;
             // 
             // label1
             // 
@@ -134,7 +138,7 @@
             // 
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.Items.AddRange(new object[] {
-            "utf8",
+            "UTF-8",
             "gb2312"});
             this.comboBox1.Location = new System.Drawing.Point(12, 54);
             this.comboBox1.Name = "comboBox1";

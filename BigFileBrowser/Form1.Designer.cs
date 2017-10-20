@@ -53,10 +53,13 @@
             // 
             // textBox1
             // 
+            this.textBox1.AcceptsReturn = true;
+            this.textBox1.AcceptsTab = true;
             this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.textBox1.CausesValidation = false;
             this.textBox1.HideSelection = false;
             this.textBox1.Location = new System.Drawing.Point(13, 116);
+            this.textBox1.MaxLength = 9999999;
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;

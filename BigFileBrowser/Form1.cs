@@ -239,7 +239,9 @@ namespace BigFileBrowser
                 beginindex = beginindex < 0 ? 0 : beginindex;
 
                 byte[] buffer = readByte(beginindex, len);
-                textBox1.Text = byteToString(buffer);
+                string output = byteToString(buffer).Replace("\0"," ");
+                textBox1.ResetText();
+                textBox1.AppendText(output);
             }
             catch (Exception e)
             {

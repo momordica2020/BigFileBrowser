@@ -412,6 +412,27 @@ namespace BigFileBrowser
             new Thread(backwork3).Start();
 
         }
+
+        private void Form1_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.All;
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void Form1_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            if(s.Length>0)
+            {
+                open(s[0]);
+            }
+        }
     }
 
     public class Item : IComparable<Item>

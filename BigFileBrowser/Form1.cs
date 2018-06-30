@@ -15,210 +15,82 @@ using System.Threading;
 
 namespace BigFileBrowser
 {
+
+
     public partial class Form1 : Form
     {
+        class SearchItem
+        {
+            public string text;
+            public int num;
+            public long index;
+
+            public SearchItem(string text, int num,long index)
+            {
+                this.text = text;
+                this.num = num;
+                this.index = index;
+            }
+        }
+
         public Form1()
         {
             InitializeComponent();
             comboBox1.SelectedIndex = 0;
         }
 
+        private delegate void sendString(string str);
+        private delegate void sendItemList(List<SearchItem> items);
 
 
         string filepath = "";
         long filelen = 1;
+        int pagelen = 1000;
+        int pagenum = 1;
+        int encodingIndex = 0;
         Encoding encoding = Encoding.UTF8;
 
-        ///// <summary>
-        ///// 返回流的编码格式
-        ///// </summary>
-        ///// <param name="stream"></param>
-        ///// <returns></returns>
-        //private static Encoding getEncoding(string streamName)
-        //{
-        //    Encoding encoding = Encoding.Default;
-        //    using (Stream stream = new FileStream(streamName, FileMode.Open))
-        //    {
-        //        MemoryStream msTemp = new MemoryStream();
-        //        int len = 0;
-        //        byte[] buff = new byte[512];
-        //        while ((len = stream.Read(buff, 0, 512)) > 0)
-        //        {
-        //            msTemp.Write(buff, 0, len);
-        //        }
-        //        if (msTemp.Length > 0)
-        //        {
-        //            msTemp.Seek(0, SeekOrigin.Begin);
-        //            byte[] PageBytes = new byte[msTemp.Length];
-        //            msTemp.Read(PageBytes, 0, PageBytes.Length);
-        //            msTemp.Seek(0, SeekOrigin.Begin);
-        //            int DetLen = 0;
-        //            UniversalDetector Det = new UniversalDetector(null);
-        //            byte[] DetectBuff = new byte[4096];
-        //            while ((DetLen = msTemp.Read(DetectBuff, 0, DetectBuff.Length)) > 0 && !Det.IsDone())
-        //            {
-        //                Det.HandleData(DetectBuff, 0, DetectBuff.Length);
-        //            }
-        //            Det.DataEnd();
-        //            if (Det.GetDetectedCharset() != null)
-        //            {
-        //                encoding = Encoding.GetEncoding(Det.GetDetectedCharset());
-        //            }
-        //        }
-        //        msTemp.Close();
-        //        msTemp.Dispose();
-        //        return encoding;
-        //    }
-        //}
-
-        private void getFileLen(string path)
+      
+        /// <summary>
+        /// 初始化各项信息
+        /// 包括文件长度，编码格式等
+        /// </summary>
+        /// <param name="path"></param>
+        private void InitFileInfo(string path)
         {
-            FileInfo fi = new FileInfo(path);
+            filepath = path;
+            FileInfo fi = new FileInfo(filepath);
             filelen = fi.Length;
+            pagelen = int.Parse(numericUpDown1.Value.ToString());
+            pagenum = (int)(Math.Ceiling((double)filelen /pagelen));
+
+            // encoding
+            var b = ReadBytes(0, long.Parse(numericUpDown1.Value.ToString()));
+            List<string> encodings = new List<string>();
+            foreach (var item in comboBox1.Items) encodings.Add(item.ToString());
+            encodingIndex = EncodingHelper.getEncodingAuto(b, encodings.ToArray());
+            encoding = Encoding.GetEncoding(encodings[encodingIndex]);
         }
 
-        private void open(string path)
+        private void Open(string path)
         {
-            this.filepath = path;
-            label1.Text = "文件名：" + path;
-            getFileLen(path);
-            trackBar1.Maximum = (int)Math.Floor((double)(filelen / int.Parse(numericUpDown1.Value.ToString())));
+            InitFileInfo(path);
+
+            label1.Text = "文件名：" + filepath;
+            trackBar1.Maximum = pagenum-1;
             trackBar1.Value = 0;
-            getEncodingAuto();
-            read();
+            comboBox1.SelectedIndex = encodingIndex;
+            listView1.Items.Clear();
+
+            textBox1.ResetText();
+            textBox1.AppendText(ReadText(trackBar1.Value));
         }
 
 
-        public static int GetHanNum(string str)
-        {
-            int count = 0;
-            Regex regex = new Regex(@"^[\u4E00-\u9FA5]{0,}$");
-            for (int i = 0; i < str.Length; i++)
-            {
-                if (regex.IsMatch(str[i].ToString()))
-                {
-                    count++;
-                }
-            }
-            return count;
-        }
-
-        /// <summary>
-        /// 常见汉字个数
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        private int getCommonHanNum(string str)
-        {
-            int count = 0;
-
-            foreach (char c in str)
-            {
-                if (Resources.commonChineseWords.Contains(c)) count++;
-            }
-
-            return count;
-        }
-
-        /// <summary>
-        /// 根据字节转化为对应的字符串，并且避免（多字节码的）截断。
-        /// </summary>
-        /// <param name="buffer"></param>
-        /// <returns></returns>
-        private string byteToString(byte[] buffer)
-        {
-            int len = int.Parse(numericUpDown1.Value.ToString());
-            string res = "";
-            int begin = 0;
-            int end = buffer.Length;
-            if (encoding == Encoding.UTF8)
-            {
-                // 首个多字节符号头
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    if (buffer[i] >= 192 || buffer[i] < 128)   // 多字节utf-8的首字节或英文字母
-                    {
-                        begin = i;
-                        break;
-                    }
-                }
-                // 最后的多字节符号头（仅检查尾部2字节的余量）
-                for (int i = buffer.Length - 1; i > buffer.Length - 3; i--)
-                {
-                    if (buffer[i] >= 192 || buffer[i] < 128)   // 多字节utf-8的首字节或英文字母
-                    {
-                        end = i;
-                        break;
-                    }
-                }
-            }
-            else if (encoding == Encoding.GetEncoding("gb2312"))
-            {
-                int firstASCII = -1;
-                int lastASCII = -1;
-                for (int i = 0; i < buffer.Length; i++)
-                {
-                    if (buffer[i] <= 128)
-                    {
-                        if (firstASCII < 0) firstASCII = i;
-                        lastASCII = i;
-                    }
-                }
-                if (firstASCII < 0)
-                {
-                    // no ASCII
-                    // 选取常见字更多的那一种情况视为正确分割
-                    byte[] tmp1 = new byte[buffer.Length - 1];
-                    Array.Copy(buffer, 1, tmp1, 0, tmp1.Length);
-
-                    if (getCommonHanNum(encoding.GetString(tmp1)) > getCommonHanNum(encoding.GetString(buffer)))
-                    {
-                        begin = 1;
-                        end = end - 1;
-                    }
-                }
-                else
-                {
-                    // have ASCII
-                    // 两侧如果不是偶数长度，则必有截断。
-                    if (firstASCII % 2 != 0) begin = 1;
-                    if ((buffer.Length - lastASCII + 1) % 2 != 0) end = end - 1;
-                }
-                // 防止余量2字节以上，造成重复
-                if (end - 1 > len) end -= 2;
-            }
-            // 防止余量的字节是ASCII码字符时，造成重复
-            if (end > len && buffer[end] <= 128) end -= 1;
-
-            byte[] buf1 = new byte[end - begin];
-            Array.Copy(buffer, begin, buf1, 0, buf1.Length);
-            res = encoding.GetString(buf1);
-            return res;
-        }
-
-        private void getEncodingAuto()
-        {
-            byte[] test = readByte(0, long.Parse(numericUpDown1.Value.ToString()));
-            int selectindex = 0;
-            int maxhannum = -1;
-            for (int i = 0; i < comboBox1.Items.Count; i++)
-            {
-                string str = Encoding.GetEncoding(comboBox1.Items[i].ToString()).GetString(test);
-                int thishannum = getCommonHanNum(str);
-                if (maxhannum < thishannum)
-                {
-                    maxhannum = thishannum;
-                    selectindex = i;
-                }
-            }
-            this.comboBox1.SelectedIndex = selectindex;
-
-        }
-
-        private byte[] readByte(long begin, long len)
+        private byte[] ReadBytes(long begin, long len)
         {
             byte[] buffer = new byte[len];
-            using (FileStream fs = File.Open(filepath, FileMode.Open))
+            using (FileStream fs = File.Open(filepath, FileMode.Open,FileAccess.Read))
             {
                 fs.Seek(begin, SeekOrigin.Begin);
                 using (MemoryStream ms = new MemoryStream())
@@ -229,27 +101,43 @@ namespace BigFileBrowser
             return buffer;
         }
 
-        private void read()
+        private string ReadText(long beginnum)
         {
             try
             {
-                long beginindex = long.Parse(numericUpDown1.Value.ToString()) * trackBar1.Value;
+                long beginindex = beginnum * pagelen;
                 //Encoding encoding = Encoding.GetEncoding(getEncoding(filepath).BodyName);
 
-                int len = int.Parse(numericUpDown1.Value.ToString());
+                int len = pagelen;
                 len += 2;   // 后都多取 2 字符，检查是否有汉字截断
                 beginindex = beginindex < 0 ? 0 : beginindex;
 
-                byte[] buffer = readByte(beginindex, len);
-                string output = byteToString(buffer).Replace("\0", " ");
-                textBox1.ResetText();
-                textBox1.AppendText(output);
+                byte[] buffer = ReadBytes(beginindex, len);
+                string output = EncodingHelper.byteToString(buffer,pagelen,encoding).Replace("\0", " ");
+
+                return output;
+                
             }
             catch (Exception e)
             {
-
+                return e.Message;
             }
         }
+
+        private void Print(string str)
+        {
+            if (this.InvokeRequired)
+            {
+                sendString te = new sendString(Print);
+                Invoke(te, (object)str);
+            }
+            else
+            {
+                label4.Text = str.Trim();
+            }
+        }
+
+
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -258,12 +146,13 @@ namespace BigFileBrowser
 
         private void openFileDialog1_FileOk(object sender, CancelEventArgs e)
         {
-            open(openFileDialog1.FileName);
+            Open(openFileDialog1.FileName);
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
-            read();
+            textBox1.ResetText();
+            textBox1.AppendText(ReadText(trackBar1.Value));
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -279,7 +168,7 @@ namespace BigFileBrowser
                 default:
                     break;
             }
-            read();
+            ReadText(trackBar1.Value);
         }
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -288,128 +177,124 @@ namespace BigFileBrowser
             comboBox1.Select(0, 1);
         }
 
-        private long maxindex;
-        private long maxnum;
-        private void backwork()
-        {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < maxindex; i++)
-            {
-                //if (i > 100000) break;
-                long len = maxnum + 2;
-                long beginindex = i * maxnum;
-                beginindex = beginindex < 0 ? 0 : beginindex;
-                byte[] buffer = readByte(beginindex, len);
-                string output = byteToString(buffer);
+        //private long maxindex;
+        //private long maxnum;
+        //private void backwork()
+        //{
+        //    StringBuilder sb = new StringBuilder();
+        //    for (int i = 0; i < maxindex; i++)
+        //    {
+        //        //if (i > 100000) break;
+        //        long len = maxnum + 2;
+        //        long beginindex = i * maxnum;
+        //        beginindex = beginindex < 0 ? 0 : beginindex;
+        //        byte[] buffer = ReadBytes(beginindex, len);
+        //        string output = EncodingHelper.byteToString(buffer, pagelen, encoding);
 
-                for (int j = 0; j < output.Length; j++)
-                {
-                    if ((output[j] >= 'A' && output[j] <= 'Z')
-                        || (output[j] >= '0' && output[j] <= '9')
-                        || output[j] == '-'
-                        || output[j] == ' '
-                        || GetHanNum(output[j].ToString()) > 0)
-                    {
-                        sb.Append(output[j]);
-                    }
-                    else
-                    {
-                        if (sb.Length > 20)
-                        {
-                            using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Append))
-                            {
-                                using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
-                                {
-                                    sw.WriteLine(sb.ToString());
-                                }
-                            }
-                        }
-                        sb.Clear();
-                    }
-                }
-            }
-        }
+        //        for (int j = 0; j < output.Length; j++)
+        //        {
+        //            if ((output[j] >= 'A' && output[j] <= 'Z')
+        //                || (output[j] >= '0' && output[j] <= '9')
+        //                || output[j] == '-'
+        //                || output[j] == ' '
+        //                || EncodingHelper.GetHanNum(output[j].ToString()) > 0)
+        //            {
+        //                sb.Append(output[j]);
+        //            }
+        //            else
+        //            {
+        //                if (sb.Length > 20)
+        //                {
+        //                    using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Append))
+        //                    {
+        //                        using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
+        //                        {
+        //                            sw.WriteLine(sb.ToString());
+        //                        }
+        //                    }
+        //                }
+        //                sb.Clear();
+        //            }
+        //        }
+        //    }
+        //}
 
-        private bool isEWord(char c)
-        {
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) return true;
-            return false;
-        }
 
-        private void backwork2()
-        {
-            string[] lines = File.ReadAllLines(filepath, Encoding.Default);
-            Dictionary<string, Item> items = new Dictionary<string, Item>();
-            foreach (var line in lines)
-            {
-                int hanbegin = 0;
-                int hanend = 0;
-                for (int i = 0; i < line.Length; i++) if (GetHanNum(line[i].ToString()) > 0) { hanbegin = i; break; }
-                for (int i = line.Length - 1; i >= 0; i--) if (GetHanNum(line[i].ToString()) > 0) { hanend = i; break; }
-                if (hanbegin > 0)
-                {
-                    string tmp = line.Substring(0, hanbegin);
-                    int cutbegin = tmp.IndexOf("000");
-                    string name = line.Substring(hanbegin, hanend - hanbegin + 1).Replace(" ", "");
-                    if (cutbegin > 0)
-                    {
-                        string id = tmp.Substring(0, cutbegin);
-                        string phone = tmp.Substring(cutbegin + 3);
-                        if (id.Length == 5
-                          || (isEWord(id[0]) && id.Length == 9)
-                          || (!isEWord(id[0]) && id.Length == 8)
-                          || id.Length == 18) ;
-                        else
-                        {
-                            id = id + '0';
-                        }
 
-                        if (!items.ContainsKey(id)) items[id] = new Item(id, name, phone);
-                    }
-                }
-            }
-            using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Create))
-            {
-                using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
-                {
-                    foreach (var item in items.Values)
-                    {
-                        sw.WriteLine(string.Format("{0},{1},{2}", item.id, item.name, item.phone));
-                    }
-                }
-            }
+        //private void backwork2()
+        //{
+        //    string[] lines = File.ReadAllLines(filepath, Encoding.Default);
+        //    Dictionary<string, Item> items = new Dictionary<string, Item>();
+        //    foreach (var line in lines)
+        //    {
+        //        int hanbegin = 0;
+        //        int hanend = 0;
+        //        for (int i = 0; i < line.Length; i++) if (EncodingHelper.GetHanNum(line[i].ToString()) > 0) { hanbegin = i; break; }
+        //        for (int i = line.Length - 1; i >= 0; i--) if (EncodingHelper.GetHanNum(line[i].ToString()) > 0) { hanend = i; break; }
+        //        if (hanbegin > 0)
+        //        {
+        //            string tmp = line.Substring(0, hanbegin);
+        //            int cutbegin = tmp.IndexOf("000");
+        //            string name = line.Substring(hanbegin, hanend - hanbegin + 1).Replace(" ", "");
+        //            if (cutbegin > 0)
+        //            {
+        //                string id = tmp.Substring(0, cutbegin);
+        //                string phone = tmp.Substring(cutbegin + 3);
+        //                if (id.Length == 5
+        //                  || (EncodingHelper.isEWord(id[0]) && id.Length == 9)
+        //                  || (!EncodingHelper.isEWord(id[0]) && id.Length == 8)
+        //                  || id.Length == 18) ;
+        //                else
+        //                {
+        //                    id = id + '0';
+        //                }
 
-        }
+        //                if (!items.ContainsKey(id)) items[id] = new Item(id, name, phone);
+        //            }
+        //        }
+        //    }
+        //    using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Create))
+        //    {
+        //        using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
+        //        {
+        //            foreach (var item in items.Values)
+        //            {
+        //                sw.WriteLine(string.Format("{0},{1},{2}", item.id, item.name, item.phone));
+        //            }
+        //        }
+        //    }
 
-        private void backwork3()
-        {
-            string[] lines = File.ReadAllLines(filepath, Encoding.Default);
-            List<Item> res = new List<Item>();
-            foreach (var line in lines)
-            {
-                string[] tmp = line.Split(',');
-                res.Add(new Item(tmp[0], tmp[1], tmp[2]));
-            }
-            res.Sort();
+        //}
+
+        //private void backwork3()
+        //{
+        //    string[] lines = File.ReadAllLines(filepath, Encoding.Default);
+        //    List<Item> res = new List<Item>();
+        //    foreach (var line in lines)
+        //    {
+        //        string[] tmp = line.Split(',');
+        //        res.Add(new Item(tmp[0], tmp[1], tmp[2]));
+        //    }
+        //    res.Sort();
             
             
-            using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Create))
-            {
-                using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
-                {
-                    foreach (var item in res)
-                    {
-                        sw.WriteLine(string.Format("{0},{1},{2}", item.id, item.name, item.phone));
-                    }
-                }
-            }
-        }
+        //    using (FileStream fs = File.Open(Path.GetDirectoryName(filepath) + "/" + Path.GetFileName(filepath) + "_output.txt", FileMode.Create))
+        //    {
+        //        using (StreamWriter sw = new StreamWriter(fs, Encoding.Default))
+        //        {
+        //            foreach (var item in res)
+        //            {
+        //                sw.WriteLine(string.Format("{0},{1},{2}", item.id, item.name, item.phone));
+        //            }
+        //        }
+        //    }
+        //}
 
         private void button2_Click(object sender, EventArgs e)
         {
-            maxindex = trackBar1.Maximum;
-            maxnum = long.Parse(numericUpDown1.Value.ToString());
-            new Thread(backwork3).Start();
+            //maxindex = trackBar1.Maximum;
+            //maxnum = long.Parse(numericUpDown1.Value.ToString());
+            //new Thread(backwork3).Start();
 
         }
 
@@ -430,8 +315,113 @@ namespace BigFileBrowser
             string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             if(s.Length>0)
             {
-                open(s[0]);
+                Open(s[0]);
             }
+        }
+
+        private void ShowSearchResult(List<SearchItem> items)
+        {
+            if (this.InvokeRequired)
+            {
+                sendItemList te = new sendItemList(ShowSearchResult);
+                Invoke(te, (object)items);
+            }
+            else
+            {
+                int maxnum = 1000;
+                listView1.Items.Clear();
+                for(int i = 0; i < Math.Min(maxnum, items.Count); i++)
+                {
+                    listView1.Items.Add(new ListViewItem(new string[] { items[i].text, items[i].num.ToString() }));
+                }
+                listView1.Show();
+            }
+        }
+
+        private void workSearch(object keyo)
+        {
+            try
+            {
+                string key = (string)keyo;
+                byte[] keyb = encoding.GetBytes(key);
+                List<SearchItem> res = new List<SearchItem>();
+
+                using (FileStream fs = new FileStream(filepath, FileMode.Open, FileAccess.Read))
+                {
+                    long nowp = 0;
+                    int dl = 1024 * 1024 * 60;
+                    byte[] blockb= new byte[dl];
+                    do
+                    {
+                        fs.Seek(nowp,SeekOrigin.Begin);
+                        fs.Read(blockb, 0, dl);
+                        if (filelen - nowp < dl) for (long i = filelen - nowp; i < dl; i++) blockb[i] = 0;
+                        bool find = false;
+                        for (int i = 0; i < dl - keyb.Length; i++)
+                        {
+                            bool allsame = true;
+                            for (int j = 0; j < keyb.Length; j++)
+                            {
+                                if (keyb[j] != blockb[i + j])
+                                {
+                                    allsame = false;
+                                    break;
+                                }
+                            }
+                            if (allsame)
+                            {
+                                int tbegin = Math.Max(0, i - 12);
+                                int tcount = Math.Min(blockb.Length - tbegin, keyb.Length + 24);
+                                string text = encoding.GetString(blockb, tbegin, tcount).Replace("\0"," ");
+                                long index = nowp + i;
+                                int num = (int)((double)index / pagelen);
+                                if (res.Count <= 0 || res.Last().index != index) res.Add(new SearchItem(text, num, nowp + i));
+                                //break;
+                            }
+                        }
+                        Print(string.Format("{0}/{1},{2:N}%,{3}", nowp, filelen, (double)nowp * 100 / filelen, res.Count));
+                        //ShowSearchResult(res);
+                        nowp += (int)(0.95 * dl);
+                    } while (nowp < filelen );
+                }
+                Print(string.Format("{0}个结果。{1}", res.Count, res.Count > 1000 ? "前1000个如下" : ""));
+                ShowSearchResult(res);
+
+            }
+            catch(Exception e)
+            {
+
+            }
+            
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            new Thread(workSearch).Start(textBox2.Text);
+            
+        }
+
+        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (listView1.SelectedItems.Count <= 0) return;
+
+                int num = int.Parse(listView1.SelectedItems[0].SubItems[1].Text.ToString());
+                trackBar1.Value = num;
+                textBox1.ResetText();
+                textBox1.AppendText(ReadText(num));
+            }
+            catch
+            {
+
+            }
+           
+        }
+
+        private void Form1_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            Environment.Exit(0);
         }
     }
 

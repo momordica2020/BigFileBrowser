@@ -113,7 +113,7 @@ namespace BigFileBrowser
                 beginindex = beginindex < 0 ? 0 : beginindex;
 
                 byte[] buffer = ReadBytes(beginindex, len);
-                string output = EncodingHelper.byteToString(buffer,pagelen,encoding).Replace("\0", " ");
+                string output = EncodingHelper.byteToString(buffer, pagelen, encoding).Replace("\0", " ").Replace("\r\n", "\n").Replace("\n", Environment.NewLine);
 
                 return output;
                 
@@ -422,6 +422,21 @@ namespace BigFileBrowser
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             Environment.Exit(0);
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            if (button4.Text == "不换行")
+            {
+                textBox1.WordWrap = false;
+                button4.Text = "换行";
+            }
+            else
+            {
+                textBox1.WordWrap = true;
+                button4.Text = "不换行";
+            }
+            
         }
     }
 

@@ -43,6 +43,7 @@
             this.listView1 = new System.Windows.Forms.ListView();
             this.text = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.num = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.button4 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             this.SuspendLayout();
@@ -207,12 +208,23 @@
             // 
             this.num.Text = "页数";
             // 
+            // button4
+            // 
+            this.button4.Location = new System.Drawing.Point(271, 87);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(75, 33);
+            this.button4.TabIndex = 13;
+            this.button4.Text = "不换行";
+            this.button4.UseVisualStyleBackColor = true;
+            this.button4.Click += new System.EventHandler(this.button4_Click);
+            // 
             // Form1
             // 
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1215, 482);
+            this.Controls.Add(this.button4);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.button3);
@@ -257,6 +269,7 @@
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.ColumnHeader text;
         private System.Windows.Forms.ColumnHeader num;
+        private System.Windows.Forms.Button button4;
     }
 }
 

@@ -44,15 +44,17 @@
             this.text = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.num = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.button4 = new System.Windows.Forms.Button();
+            this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             ((System.ComponentModel.ISupportInitialize)(this.trackBar1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(12, 12);
+            this.button1.Location = new System.Drawing.Point(9, 10);
+            this.button1.Margin = new System.Windows.Forms.Padding(2);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(121, 37);
+            this.button1.Size = new System.Drawing.Size(91, 30);
             this.button1.TabIndex = 0;
             this.button1.Text = "打开文件";
             this.button1.UseVisualStyleBackColor = true;
@@ -65,31 +67,34 @@
             this.textBox1.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this.textBox1.CausesValidation = false;
             this.textBox1.HideSelection = false;
-            this.textBox1.Location = new System.Drawing.Point(13, 116);
+            this.textBox1.Location = new System.Drawing.Point(10, 93);
+            this.textBox1.Margin = new System.Windows.Forms.Padding(2);
             this.textBox1.MaxLength = 9999999;
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(886, 354);
+            this.textBox1.Size = new System.Drawing.Size(664, 283);
             this.textBox1.TabIndex = 1;
             this.textBox1.TabStop = false;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(142, 23);
+            this.label1.Location = new System.Drawing.Point(106, 18);
+            this.label1.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(52, 15);
+            this.label1.Size = new System.Drawing.Size(41, 12);
             this.label1.TabIndex = 2;
             this.label1.Text = "文件：";
             // 
             // trackBar1
             // 
-            this.trackBar1.Location = new System.Drawing.Point(145, 54);
+            this.trackBar1.Location = new System.Drawing.Point(109, 43);
+            this.trackBar1.Margin = new System.Windows.Forms.Padding(2);
             this.trackBar1.Maximum = 1000;
             this.trackBar1.Name = "trackBar1";
-            this.trackBar1.Size = new System.Drawing.Size(754, 56);
+            this.trackBar1.Size = new System.Drawing.Size(566, 45);
             this.trackBar1.TabIndex = 4;
             this.trackBar1.TickFrequency = 2;
             this.trackBar1.Scroll += new System.EventHandler(this.trackBar1_Scroll);
@@ -106,7 +111,8 @@
             0,
             0,
             0});
-            this.numericUpDown1.Location = new System.Drawing.Point(145, 85);
+            this.numericUpDown1.Location = new System.Drawing.Point(109, 68);
+            this.numericUpDown1.Margin = new System.Windows.Forms.Padding(2);
             this.numericUpDown1.Maximum = new decimal(new int[] {
             20000,
             0,
@@ -118,7 +124,7 @@
             0,
             0});
             this.numericUpDown1.Name = "numericUpDown1";
-            this.numericUpDown1.Size = new System.Drawing.Size(120, 25);
+            this.numericUpDown1.Size = new System.Drawing.Size(90, 21);
             this.numericUpDown1.TabIndex = 5;
             this.numericUpDown1.Value = new decimal(new int[] {
             1000,
@@ -129,9 +135,10 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(12, 95);
+            this.label3.Location = new System.Drawing.Point(9, 76);
+            this.label3.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(127, 15);
+            this.label3.Size = new System.Drawing.Size(101, 12);
             this.label3.TabIndex = 6;
             this.label3.Text = "每次显示字符数：";
             // 
@@ -141,18 +148,20 @@
             this.comboBox1.Items.AddRange(new object[] {
             "UTF-8",
             "gb2312"});
-            this.comboBox1.Location = new System.Drawing.Point(12, 54);
+            this.comboBox1.Location = new System.Drawing.Point(9, 43);
+            this.comboBox1.Margin = new System.Windows.Forms.Padding(2);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(121, 23);
+            this.comboBox1.Size = new System.Drawing.Size(92, 20);
             this.comboBox1.TabIndex = 7;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
             // button2
             // 
             this.button2.Enabled = false;
-            this.button2.Location = new System.Drawing.Point(729, 14);
+            this.button2.Location = new System.Drawing.Point(547, 11);
+            this.button2.Margin = new System.Windows.Forms.Padding(2);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(170, 23);
+            this.button2.Size = new System.Drawing.Size(128, 18);
             this.button2.TabIndex = 8;
             this.button2.Text = "button2";
             this.button2.UseVisualStyleBackColor = true;
@@ -160,16 +169,18 @@
             // 
             // textBox2
             // 
-            this.textBox2.Location = new System.Drawing.Point(905, 13);
+            this.textBox2.Location = new System.Drawing.Point(679, 10);
+            this.textBox2.Margin = new System.Windows.Forms.Padding(2);
             this.textBox2.Name = "textBox2";
-            this.textBox2.Size = new System.Drawing.Size(248, 25);
+            this.textBox2.Size = new System.Drawing.Size(187, 21);
             this.textBox2.TabIndex = 9;
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(1159, 12);
+            this.button3.Location = new System.Drawing.Point(869, 10);
+            this.button3.Margin = new System.Windows.Forms.Padding(2);
             this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(44, 26);
+            this.button3.Size = new System.Drawing.Size(33, 21);
             this.button3.TabIndex = 10;
             this.button3.Text = "搜";
             this.button3.UseVisualStyleBackColor = true;
@@ -178,9 +189,10 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(902, 41);
+            this.label4.Location = new System.Drawing.Point(676, 33);
+            this.label4.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(82, 15);
+            this.label4.Size = new System.Drawing.Size(65, 12);
             this.label4.TabIndex = 11;
             this.label4.Text = "全文搜索：";
             // 
@@ -191,9 +203,10 @@
             this.text,
             this.num});
             this.listView1.FullRowSelect = true;
-            this.listView1.Location = new System.Drawing.Point(908, 72);
+            this.listView1.Location = new System.Drawing.Point(681, 58);
+            this.listView1.Margin = new System.Windows.Forms.Padding(2);
             this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(295, 398);
+            this.listView1.Size = new System.Drawing.Size(221, 318);
             this.listView1.TabIndex = 12;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
@@ -210,20 +223,26 @@
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(271, 87);
+            this.button4.Location = new System.Drawing.Point(203, 70);
+            this.button4.Margin = new System.Windows.Forms.Padding(2);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(75, 33);
+            this.button4.Size = new System.Drawing.Size(56, 26);
             this.button4.TabIndex = 13;
             this.button4.Text = "不换行";
             this.button4.UseVisualStyleBackColor = true;
             this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
+            // backgroundWorker1
+            // 
+            this.backgroundWorker1.DoWork += new System.ComponentModel.DoWorkEventHandler(this.backgroundWorker1_DoWork);
+            this.backgroundWorker1.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.backgroundWorker1_RunWorkerCompleted);
+            // 
             // Form1
             // 
             this.AllowDrop = true;
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1215, 482);
+            this.ClientSize = new System.Drawing.Size(911, 386);
             this.Controls.Add(this.button4);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.label4);
@@ -238,6 +257,7 @@
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.button1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.MaximizeBox = false;
             this.Name = "Form1";
             this.Text = "大文件查看";
@@ -270,6 +290,7 @@
         private System.Windows.Forms.ColumnHeader text;
         private System.Windows.Forms.ColumnHeader num;
         private System.Windows.Forms.Button button4;
+        private System.ComponentModel.BackgroundWorker backgroundWorker1;
     }
 }
 

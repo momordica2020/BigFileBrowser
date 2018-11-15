@@ -50,6 +50,8 @@ namespace BigFileBrowser
         int encodingIndex = 0;
         Encoding encoding = Encoding.UTF8;
 
+        int searchMaxResult = 1000;
+
       
         /// <summary>
         /// 初始化各项信息
@@ -328,9 +330,8 @@ namespace BigFileBrowser
             }
             else
             {
-                int maxnum = 1000;
                 listView1.Items.Clear();
-                for(int i = 0; i < Math.Min(maxnum, items.Count); i++)
+                for(int i = 0; i < Math.Min(searchMaxResult, items.Count); i++)
                 {
                     listView1.Items.Add(new ListViewItem(new string[] { items[i].text, items[i].num.ToString() }));
                 }
@@ -380,11 +381,15 @@ namespace BigFileBrowser
                             }
                         }
                         Print(string.Format("{0}/{1},{2:N}%,{3}", nowp, filelen, (double)nowp * 100 / filelen, res.Count));
-                        //ShowSearchResult(res);
+                        if (res.Count <= searchMaxResult || nowp==0)
+                        {
+                            ShowSearchResult(res);
+                        }
+                        
                         nowp += (int)(0.95 * dl);
                     } while (nowp < filelen );
                 }
-                Print(string.Format("{0}个结果。{1}", res.Count, res.Count > 1000 ? "前1000个如下" : ""));
+                Print(string.Format("{0}个结果。{1}", res.Count, res.Count > searchMaxResult ? string.Format("前{0}个如下", searchMaxResult): ""));
                 ShowSearchResult(res);
 
             }
@@ -397,8 +402,10 @@ namespace BigFileBrowser
 
         private void button3_Click(object sender, EventArgs e)
         {
-            new Thread(workSearch).Start(textBox2.Text);
-            
+            //backgroundWorker1.
+            //new Thread(workSearch).Start(textBox2.Text);
+            button3.Enabled = false;
+            backgroundWorker1.RunWorkerAsync();
         }
 
         private void listView1_SelectedIndexChanged(object sender, EventArgs e)
@@ -437,6 +444,16 @@ namespace BigFileBrowser
                 button4.Text = "不换行";
             }
             
+        }
+
+        private void backgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+        {
+            workSearch(textBox2.Text);
+        }
+
+        private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            button3.Enabled = true;
         }
     }
 

@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-using Mozilla.NUniversalCharDet;
 using System.Text.RegularExpressions;
 using BigFileBrowser.Properties;
 using System.Threading;

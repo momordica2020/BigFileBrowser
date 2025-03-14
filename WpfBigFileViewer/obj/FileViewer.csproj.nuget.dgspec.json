@@ -1,0 +1,86 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\Projects\\momordica2020\\BigFileBrowser\\WpfBigFileViewer\\FileViewer.csproj": {}
+  },
+  "projects": {
+    "D:\\Projects\\momordica2020\\BigFileBrowser\\WpfBigFileViewer\\FileViewer.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Projects\\momordica2020\\BigFileBrowser\\WpfBigFileViewer\\FileViewer.csproj",
+        "projectName": "FileViewer",
+        "projectPath": "D:\\Projects\\momordica2020\\BigFileBrowser\\WpfBigFileViewer\\FileViewer.csproj",
+        "packagesPath": "C:\\Users\\death\\.nuget\\packages\\",
+        "outputPath": "D:\\Projects\\momordica2020\\BigFileBrowser\\WpfBigFileViewer\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "D:\\VSShared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\death\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0-windows"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.200"
+      },
+      "frameworks": {
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
+          "dependencies": {
+            "Prism.DryIoc": {
+              "target": "Package",
+              "version": "[9.0.537, )"
+            },
+            "Prism.Wpf": {
+              "target": "Package",
+              "version": "[9.0.537, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            },
+            "Microsoft.WindowsDesktop.App.WPF": {
+              "privateAssets": "none"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

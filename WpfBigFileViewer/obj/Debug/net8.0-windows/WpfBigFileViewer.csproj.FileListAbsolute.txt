@@ -1,0 +1,3 @@
+D:\Projects\momordica2020\BigFileBrowser\WpfBigFileViewer\obj\Debug\net8.0-windows\WpfBigFileViewer.csproj.AssemblyReference.cache
+D:\Projects\momordica2020\BigFileBrowser\WpfBigFileViewer\obj\Debug\net8.0-windows\App.g.cs
+D:\Projects\momordica2020\BigFileBrowser\WpfBigFileViewer\obj\Debug\net8.0-windows\WpfBigFileViewer_MarkupCompile.cache

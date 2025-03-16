@@ -3,21 +3,13 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Net.NetworkInformation;
 using BigFileBrowser.Providers;
-using System.Runtime.InteropServices;
 using MaterialSkin.Controls;
 using MaterialSkin;
-using System.Windows.Media.Animation;
 using BigFileBrowser.Events;
-using DryIoc.Messages;
 
 
 namespace BigFileBrowser
@@ -47,6 +39,9 @@ namespace BigFileBrowser
         //Encoding encoding = Encoding.UTF8;
 
         int searchMaxResult = 1000;
+        int PageNum = 0;
+        int PageSize = 0;
+        int PageIndex = 0;
 
         private object FileShowMutex = new();
         Debouncer FilePageDebouncer = new Debouncer(100);
@@ -67,15 +62,15 @@ namespace BigFileBrowser
             {
                 if (append)
                 {
-                    if (FileContentTextBox.TextLength > TextMaxLength)
+                    if (TextBoxPageContent.TextLength > TextMaxLength)
                     {
-                        FileContentTextBox.Text = FileContentTextBox.Text.Substring(TextMaxLength / 2);
+                        TextBoxPageContent.Text = TextBoxPageContent.Text.Substring(TextMaxLength / 2);
                     }
-                    FileContentTextBox.AppendText(text);
+                    TextBoxPageContent.AppendText(text);
                 }
                 else
                 {
-                    FileContentTextBox.Text = text;
+                    TextBoxPageContent.Text = text;
                 }
 
             }));
@@ -114,6 +109,7 @@ namespace BigFileBrowser
 
             // init contols
             ComboBoxPageSize.SelectedIndex = 2;
+            PageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
             ComboBoxEncodings.Items.Clear();
             foreach (var encoding in EncodingHelper.Encodings)
             {
@@ -123,6 +119,9 @@ namespace BigFileBrowser
             SliderPage.Enabled = false;
             NumericPage.Enabled = false;
 
+            listView2.DrawItem += ListView2_DrawItem;
+            listView2.DrawSubItem += ListView2_DrawSubItem;
+            TextBoxPageContent.HideSelection = false;
 
             //fileSearcher = new FileSearcher(ShowSearchResult2);
 
@@ -130,6 +129,61 @@ namespace BigFileBrowser
 
 
             //SetDarkMode(this);
+        }
+
+        private void ListView2_DrawItem(object sender, DrawListViewItemEventArgs e)
+        {
+            e.DrawDefault = true;
+        }
+
+        private void ListView2_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
+        {
+
+            //e.DrawBackground(); // 绘制背景
+            //if (e.ColumnIndex == 1) // 只处理第二列（Column2）
+            //{
+            //    // 获取当前行的数据
+            //    ListViewItem item = e.Item;
+            //    string text = e.SubItem.Text;
+            //    SearchResult tag = ((SearchResult)item.Tag);
+            //    int offset = tag.MatchedPositionInContext;
+            //    int length = tag.Key.Length;
+
+            //    // 确保偏移量在文本范围内
+            //    if (offset >= 0 && offset < text.Length)
+            //    {
+            //        // 绘制高亮部分
+            //        string beforeHighlight = text.Substring(0, offset);
+            //        string highlight = text.Substring(offset, length);
+            //        string afterHighlight = text.Substring(offset + length);
+
+            //        e.Graphics.DrawString(beforeHighlight, e.SubItem.Font, Brushes.White, e.Bounds.Left, e.Bounds.Top);
+
+            //        // 计算高亮部分的区域
+            //        SizeF beforeSize = e.Graphics.MeasureString(beforeHighlight, e.SubItem.Font);
+            //        Rectangle highlightRect = new Rectangle(
+            //            e.Bounds.Left + (int)beforeSize.Width,
+            //            e.Bounds.Top,
+            //            (int)e.Graphics.MeasureString(highlight, e.SubItem.Font).Width,
+            //            e.Bounds.Height);
+
+            //        // 绘制高亮
+            //        e.Graphics.FillRectangle(Brushes.DarkBlue, highlightRect);
+            //        e.Graphics.DrawString(highlight, e.SubItem.Font, Brushes.White, highlightRect.Left, highlightRect.Top);
+
+            //        e.Graphics.DrawString(afterHighlight, e.SubItem.Font, Brushes.White, highlightRect.Left + highlightRect.Width, e.Bounds.Top);
+            //    }
+            //    else
+            //    {
+            //        // 如果偏移量无效，直接绘制文本
+            //        e.DrawText();
+            //    }
+            //}
+            //else
+            //{
+            //    // 其他列默认绘制
+            //    e.DrawText();
+            //}
         }
 
         //private void SetDarkMode(System.Windows.Forms.Control control)
@@ -155,7 +209,7 @@ namespace BigFileBrowser
         /// 初始化读入新的文件信息
         /// </summary>
         /// <param name="path"></param>
-        private void UpdateFileInfo(string path)
+        private void LoadFile(string path)
         {
             if (file != null) file.Dispose();
             file = new StreamFile(path);
@@ -166,65 +220,121 @@ namespace BigFileBrowser
 
             foreach (var item in ComboBoxEncodings.Items)
             {
-                if (item.ToString() == file.Encoding.EncodingName)
+                if (item.ToString() == file.TextEncoding.WebName)
                 {
                     ComboBoxEncodings.SelectedItem = item;
                     break;
                 }
             }
 
-            UpdatePageInfo();
-            UpdateFileShown();
+            UpdatePage(0);
+
         }
 
-        private void UpdatePageInfo()
+
+        /// <summary>
+        /// 刷新页码相关的界面显示
+        /// </summary>
+        /// <param name="pageIndex"></param>
+        private void UpdatePage(int pageIndex)
         {
-            if (file == null) return;
-            int pageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
-            int pageNum = (int)Math.Ceiling((double)file.Size / pageSize);
-            int RangeMax = Math.Max(1, pageNum - 1);
-            int val = Math.Min(SliderPage.Value, RangeMax);
-            SliderPage.Enabled = false;
-            NumericPage.Enabled = false;
-
-            NumericPage.Maximum = RangeMax;
-            NumericPage.Value = val;
-
-            SliderPage.RangeMax = RangeMax;
-            SliderPage.Value = val;
-
-            if (RangeMax <= 1)
+            try
             {
+                if (file == null) return;
+                PageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
+                PageNum = (int)Math.Ceiling((double)file.Size / PageSize);
+                int RangeMax = Math.Max(1, PageNum - 1);
+                PageIndex = Math.Min(pageIndex, RangeMax);
                 SliderPage.Enabled = false;
                 NumericPage.Enabled = false;
+
+                NumericPage.Maximum = RangeMax;
+                NumericPage.Value = PageIndex;
+
+                SliderPage.RangeMax = RangeMax;
+                SliderPage.Value = PageIndex;
+
+                if (RangeMax <= 1)
+                {
+                    SliderPage.Enabled = false;
+                    NumericPage.Enabled = false;
+                }
+                else
+                {
+                    SliderPage.Enabled = true;
+                    NumericPage.Enabled = true;
+                }
+
+                UpdatePageContent();
             }
-            else
+            catch (Exception ex)
             {
-                SliderPage.Enabled = true;
-                NumericPage.Enabled = true;
+                PrintStatus($"UpdatePageIndex ERROR: {ex.Message}");
+                Console.WriteLine(ex);
             }
+
         }
+
 
         /// <summary>
         /// 刷新所显示的页面
         /// </summary>
-        private void UpdateFileShown()
+        private void UpdatePageContent()
         {
             if (file == null) return;
-            FilePageDebouncer.Debounce(() =>
+            Invoke(() =>
             {
-                this.Invoke(() =>
-                {
+                
                     int pageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
                     int beginNum = SliderPage.Value;
                     long beginindex = beginNum * pageSize;
                     string pageContent = file.ReadTextAsync(beginindex, pageSize).Result;
                     ShowTextToMainTextbox(pageContent);
-                });
-
-
             });
 
+        }
+
+        /// <summary>
+        /// 根据搜索结果，打开文件，定位页码，高亮特定位置
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="length"></param>
+        private void ChooseAndSelectPage(SearchResult result)
+        {
+            if (result == null) return;
+            if (file == null || result.FileInfo.FullName != file.Path)
+            {
+                // new file
+                LoadFile(result.FileInfo.FullName);
+            }
+            var pageIndex = (int)(result.MatchedPositionInFile / PageSize);
+            UpdatePage(pageIndex);
+            string nowPageContent = TextBoxPageContent.Text;
+            (int matchIndex, int matchLength, int matchCount, int matchIndexNum) = FileSearcher.Search(result.Key, nowPageContent, 0);
+            if (matchIndex >= 0)
+            {
+                tabControl1.SelectedIndex = 0;
+                TextBoxSearchInPage.Text = result.Key;
+                PrintStatus($"在当前页面第{matchIndexNum}/{matchCount}个匹配结果： {result.Key}");
+                TextBoxPageContent.ReadOnly = false;
+                TextBoxPageContent.Select(matchIndex, matchLength);
+                TextBoxPageContent.ReadOnly = true;
+
+
+            }
+            else
+            {
+                PrintStatus($"在当前页面没找到什么东西能匹配： {result.Key}");
+            }
+            //int position = (int)(result.MatchedPositionInFile % PageSize)
+            //this.Invoke(() =>
+            //{
+
+
+            //    TextBoxPageContent.ReadOnly = false;
+            //    TextBoxPageContent.Select(matchIndex, matchLength);
+            //    TextBoxPageContent.ReadOnly = true;
+            //};
         }
 
 
@@ -257,25 +367,30 @@ namespace BigFileBrowser
             {
                 Invoke(() =>
                 {
-                    toolStripStatusLabel1.Text = $"[{DateTime.Now.ToString("HH:mm:ss")}]{str}";
+                    toolStripStatusLabel1.Text = $"[{DateTime.Now.ToString("HH:mm:ss")}] {str}";
                 });
             }
             catch (Exception ex)
             {
-                //Logger.Log(ex);
+                Console.WriteLine(ex);
             }
         }
 
-
+        /// <summary>
+        /// 单文件搜索结果
+        /// </summary>
+        /// <param name="result"></param>
         private void AppendSearchResult(SearchResult result)
         {
             Invoke(() =>
             {
                 if (listView1.Items.Count >= searchMaxResult) return;
                 PrintStatus($"{result.MatchedPositionInFile}/{file.Size},{((double)result.MatchedPositionInFile / file.Size):N}%,{listView1.Items.Count}");
-                var pagesize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
-                var pagenum = result.MatchedPositionInFile / pagesize;
-                listView1.Items.Add(new ListViewItem(new string[] { result.MatchedContext, pagenum.ToString() }));
+                var pageIndex = result.MatchedPositionInFile / PageSize;
+                var item = new ListViewItem(new string[] { result.MatchedContext, pageIndex.ToString() });
+                item.Tag = result;
+                listView1.Items.Add(item);
+                listView1.Show();
                 ////listView1.Items.Clear();
                 //for (int i = 0; i < Math.Min(searchMaxResult, item.Count); i++)
                 //{
@@ -285,11 +400,22 @@ namespace BigFileBrowser
             });
         }
 
+        /// <summary>
+        /// 文件夹搜索结果
+        /// </summary>
+        /// <param name="result"></param>
         private void AppendSearchResult2(SearchResult result)
         {
             Invoke(() =>
             {
-                listView2.Items.Add(new ListViewItem(new string[] { result.MatchedContext, result.MatchedPositionInFile.ToString() }));
+                var item = new ListViewItem(new[] {
+                    result.FileInfo.FullName,
+                    result.MatchedContext,
+                    result.MatchedPositionInFile.ToString()
+                });
+                item.Tag = result;
+                listView2.Items.Add(item);
+                listView2.Show();
             });
         }
 
@@ -301,7 +427,7 @@ namespace BigFileBrowser
 
         private void openFileDialog1_FileOk(object sender, CancelEventArgs e)
         {
-            UpdateFileInfo(openFileDialog1.FileName);
+            LoadFile(openFileDialog1.FileName);
         }
 
 
@@ -310,13 +436,6 @@ namespace BigFileBrowser
         {
         }
 
-        private void button2_Click(object sender, EventArgs e)
-        {
-            //maxindex = trackBar1.Maximum;
-            //maxnum = long.Parse(numericUpDown1.Value.ToString());
-            //new Thread(backwork3).Start();
-
-        }
 
         private void Form1_DragEnter(object sender, DragEventArgs e)
         {
@@ -335,7 +454,7 @@ namespace BigFileBrowser
             string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             if (s.Length > 0)
             {
-                UpdateFileInfo(s[0]);
+                LoadFile(s[0]);
             }
         }
 
@@ -344,54 +463,62 @@ namespace BigFileBrowser
 
         private async void button3_Click(object sender, EventArgs e)
         {
+            if (file == null) return;
             button3.Enabled = false;
             listView1.Items.Clear();
             string key = textBox2.Text;
+            if (string.IsNullOrWhiteSpace(key)) return;
+            key = key.Trim();
             int pageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
-            await file.SearchAsync(key, pageSize, searchMaxResult, AppendSearchResult);
-            button3.Enabled = true;
+
+            Task.Run(async () =>
+            {
+                await file.Search(key, AppendSearchResult);
+                Invoke(() =>
+                {
+                    PrintStatus($"检索完毕，共{listView1.Items.Count}个结果");
+                    button3.Enabled = true;
+
+                });
+
+            });
+            
+            
         }
 
-        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                if (listView1.SelectedItems.Count <= 0) return;
-
-                int pageNum = int.Parse(listView1.SelectedItems[0].SubItems[1].Text.ToString());
-                SliderPage.Value = pageNum;
-                UpdatePageInfo();
-                UpdateFileShown();
-                //FileContentTextBox.ResetText();
-                //FileContentTextBox.Text = ReadText(pageNum);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex);
-            }
-
-        }
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Environment.Exit(0);
+            //Environment.Exit(0);
         }
 
 
 
 
-
-
-        private void button6_Click(object sender, EventArgs e)
+        private void SearchInDictionary()
         {
             button6.Enabled = false;
             listView2.Items.Clear();
-
             string path = textBox4.Text;
             string key = textBox5.Text.Trim();
-            _ = FileSearcher.SearchFilesForKeywordAsync(path, key, AppendSearchResult2).Result;
-            PrintStatus($"检索完毕，共{listView2.Items.Count}个结果");
-            button6.Enabled = true;
+            PrintStatus($"开始从{path}检索{key}");
+            Task.Run(() =>
+            {
+                _ = FileSearcher.SearchFilesForKeywordAsync(path, key, AppendSearchResult2).Result;
+                Invoke(() =>
+                {
+                    PrintStatus($"检索完毕，共{listView2.Items.Count}个结果");
+                    button6.Enabled = true;
+
+                });
+
+            });
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+            SearchInDictionary();
+
         }
 
         private void listView2_SizeChanged(object sender, EventArgs e)
@@ -404,15 +531,13 @@ namespace BigFileBrowser
 
         private void materialComboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            UpdatePageInfo();
-            UpdateFileShown();
+            UpdatePage(SliderPage.Value);
         }
 
         private void FIleSlider_onValueChanged(object sender, int newValue)
         {
             if (SliderPage.Enabled == false) return;
-            UpdatePageInfo();
-            UpdateFileShown();
+            UpdatePage(SliderPage.Value);
         }
 
         private void 打开ToolStripMenuItem_Click(object sender, EventArgs e)
@@ -427,16 +552,16 @@ namespace BigFileBrowser
 
         private void SwitchAutoWordwarp_CheckedChanged(object sender, EventArgs e)
         {
-            FileContentTextBox.WordWrap = SwitchAutoWordwarp.Checked;
-            UpdateFileShown();
+            TextBoxPageContent.WordWrap = SwitchAutoWordwarp.Checked;
+            UpdatePageContent();
         }
 
         private void ComboBoxEncodings_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (file == null) return;
 
-            file.Encoding = Encoding.GetEncoding(ComboBoxEncodings.SelectedItem.ToString());
-            UpdateFileShown();
+            file.TextEncoding = Encoding.GetEncoding(ComboBoxEncodings.SelectedItem.ToString());
+            UpdatePageContent();
 
 
         }
@@ -444,14 +569,87 @@ namespace BigFileBrowser
         private void NumericPage_ValueChanged(object sender, EventArgs e)
         {
             if (NumericPage.Enabled == false) return;
-            SliderPage.Value = (int)NumericPage.Value;
-            UpdatePageInfo();
-            UpdateFileShown();
+            UpdatePage((int)NumericPage.Value);
+        }
+
+        private void SearchInPage()
+        {
+            string key = TextBoxSearchInPage.Text;
+            if (string.IsNullOrWhiteSpace(key)) return;
+            string content = TextBoxPageContent.Text;
+            if (string.IsNullOrWhiteSpace(content)) return;
+
+            int beginIndex = TextBoxPageContent.SelectionStart + TextBoxPageContent.SelectionLength;
+            (int matchIndex, int matchLength, int matchCount, int matchIndexNum) = FileSearcher.Search(key, content, beginIndex);
+            if (matchIndex >= 0)
+            {
+                TextBoxPageContent.ReadOnly = false;
+                TextBoxPageContent.Select(matchIndex, matchLength);
+                TextBoxPageContent.ReadOnly = true;
+                PrintStatus($"在当前页面第{matchIndexNum}/{matchCount}个匹配结果： {key}");
+            }
+            else
+            {
+                PrintStatus($"在当前页面没找到什么东西能匹配： {key}");
+            }
         }
 
         private void ButtonSearchInPage_Click(object sender, EventArgs e)
         {
-            string key = TextBoxSearchInPage.Text;
+            SearchInPage();
+        }
+
+
+        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                if (listView1.SelectedItems.Count <= 0) return;
+                var searchResult = (SearchResult)(listView1.SelectedItems[0].Tag);
+                //var pageIndex = (int)(searchResult.MatchedPositionInFile / PageSize);
+                //UpdatePage(pageIndex);
+                ChooseAndSelectPage(searchResult);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+        }
+
+
+
+        private void listView2_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (listView2.SelectedItems.Count <= 0) return;
+            //string path = listView2.SelectedItems[0].Text;
+
+
+            var searchResult = (SearchResult)(listView2.SelectedItems[0].Tag);
+            ChooseAndSelectPage(searchResult);
+            //var pageIndex = (int)(searchResult.MatchedPositionInFile / PageSize);
+
+
+            //LoadFile(searchResult.FileInfo.FullName);
+            //UpdatePage(pageIndex);
+        }
+
+
+
+        private void TextBoxSearchInPage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            { SearchInPage();
+               
+            }
+        }
+
+        private void textBox5_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                SearchInDictionary();
+            }
         }
     }
 }

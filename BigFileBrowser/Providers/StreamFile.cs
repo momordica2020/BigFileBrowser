@@ -6,7 +6,9 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace BigFileBrowser.Providers
 {
@@ -62,7 +64,7 @@ namespace BigFileBrowser.Providers
         /// <summary>
         /// 文件编码格式
         /// </summary>
-        public Encoding Encoding
+        public Encoding TextEncoding
         {
             get
             {
@@ -104,7 +106,7 @@ namespace BigFileBrowser.Providers
             try
             {
                 long testLength = Math.Min(Size, 1000);
-                var testBytes = Read(0, 1000);
+                var testBytes = Read(0, testLength);
                 _encoding = EncodingHelper.AutoChoose(testBytes);
             }
             catch(Exception ex)
@@ -154,92 +156,182 @@ namespace BigFileBrowser.Providers
                 //long beginindex = beginnum * pagelen;
                 //Encoding encoding = Encoding.GetEncoding(getEncoding(filepath).BodyName);
 
-                int len = length;
-                len += 2;   // 后都多取 2 字符，检查是否有汉字截断
-                begin = begin < 0 ? 0 : begin;
+                length += 2;   // 多取几个字节，检查是否有汉字截断
+                begin = Math.Max(0,begin);
 
-                byte[] buffer = Read(begin, len);
-                return EncodingHelper.byteToString(buffer, length, Encoding)
-                    .Replace("\0", " ")
-                    .Replace("\r\n", "\n")
-                    .Replace("\n", Environment.NewLine)
-                    ;
-            }
-            catch (Exception e)
-            {
-                return e.Message;
-            }
-        }
+                byte[] data = Read(begin, length);
+
+                var startIndex = EncodingHelper.FindCharacterBoundary(TextEncoding, data);
+                string result = TextEncoding.GetString(data, startIndex, data.Length - startIndex);
 
 
-        public async Task SearchAsync(string key, int pageSize, int searchMaxResult, sendSearchResultEvent report)
-        {
-            try
-            {
-                int resultCount = 0;
-                byte[] keyb = Encoding.GetBytes(key);
-                //List<SearchItem> res = new List<SearchItem>();
+                
+                Decoder decoder = TextEncoding.GetDecoder();
+                char[] buffer = new char[TextEncoding.GetMaxCharCount(length)];
+                int bytesUsed, charsUsed;
+                bool completed;
 
-                using (FileStream fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
+                // 解码字节数组
+                decoder.Convert(data, startIndex, length - startIndex, buffer, 0, buffer.Length, false, out bytesUsed, out charsUsed, out completed);
+
+                // 如果未完成解码，说明结尾截断了多字节字符
+                if (!completed)
                 {
-                    long nowPosition = 0;
-                    int dl = 1024 * 1024 * 60;
-                    byte[] blockb = new byte[dl];
-                    do
-                    {
-                        fs.Seek(nowPosition, SeekOrigin.Begin);
-                        fs.Read(blockb, 0, dl);
-                        if (Size - nowPosition < dl) for (long i = Size - nowPosition; i < dl; i++) blockb[i] = 0;
-                        bool find = false;
-                        for (int i = 0; i < dl - keyb.Length; i++)
-                        {
-                            bool allsame = true;
-                            for (int j = 0; j < keyb.Length; j++)
-                            {
-                                if (keyb[j] != blockb[i + j])
-                                {
-                                    allsame = false;
-                                    break;
-                                }
-                            }
-                            if (allsame)
-                            {
-                                int tbegin = Math.Max(0, i - 12);
-                                int tcount = Math.Min(blockb.Length - tbegin, keyb.Length + 24);
-                                string context = Encoding.GetString(blockb, tbegin, tcount).Replace("\0", " ");
-                                long MatchPosition = nowPosition + i;
-                                //int pageNum = (int)((double)MatchPosition / pageSize);
-                                var item = new SearchResult
-                                {
-                                    FileInfo=this._fileInfo,
-                                    MatchedContext = context,
-                                    MatchedPositionInFile = MatchPosition,
-                                    
-                                };
-                                report(item);
-                                resultCount++;
-                                if (resultCount > searchMaxResult) return;
-                                //break;
-                            }
-                        }
-                        //Print(string.Format("{0}/{1},{2:N}%,{3}", nowPosition, filelen, (double)nowPosition * 100 / filelen, res.Count));
-                        //if (res.Count <= searchMaxResult || nowPosition == 0)
-                        //{
-                        //    //ShowSearchResult(res);
-                        //}
-
-                        nowPosition += (int)(0.95 * dl);
-                    } while (nowPosition < Size);
+                    // 找到最后一个完整字符的边界
+                    int lastValidIndex = startIndex + bytesUsed;
+                    return TextEncoding.GetString(data, startIndex, lastValidIndex - startIndex).TrimEnd();
                 }
-                //Print(string.Format("{0}个结果。{1}", res.Count, res.Count > searchMaxResult ? string.Format("前{0}个如下", searchMaxResult) : ""));
-                ///ShowSearchResult(res);
+                else
+                {
+                    // 返回解码后的字符串
+                    return new string(buffer, 0, charsUsed).TrimEnd();
+                }
+                    
 
+                //return EncodingHelper.byteToString(buffer, length, Encoding)
+                //    .Replace("\0", " ")
+                //    .Replace("\r\n", "\n")
+                //    .Replace("\n", Environment.NewLine)
+                //    ;
+                //return result;
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
+                return string.Empty;
             }
         }
+
+
+        /// <summary>
+        /// 从全文中搜索指定关键词，支持正则
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="report"></param>
+        /// <returns></returns>
+        public async Task Search(string key, sendSearchResultEvent report)
+        {
+            Dictionary<long, Match> results = new Dictionary<long, Match>();
+            try
+            {
+                Regex regex = new Regex($"{key}", RegexOptions.Singleline | RegexOptions.Compiled);
+
+                long nowPositionByte = 0;
+                //long nowPositionString = 0;
+                int blockSize = 1024 * 1024 * 60;
+                byte[] block = new byte[blockSize];
+                while (nowPositionByte < Size)
+                {
+                    string res = ReadTextAsync(nowPositionByte, blockSize).Result;
+
+                    var matches = regex.Matches(res);
+                    foreach(Match match in matches)
+                    {
+
+                        long deltaIndexByte = TextEncoding.GetByteCount(res.Substring(0, match.Groups[0].Index));
+                        if (!results.ContainsKey(deltaIndexByte))
+                        {
+                            results.Add(deltaIndexByte, match);
+                            report(new SearchResult
+                            {
+                                FileInfo = _fileInfo,
+                                Key = match.Groups[0].Value,
+                                MatchedContext = res.Substring(Math.Max(0, match.Groups[0].Index - 10), Math.Min(20, res.Length - Math.Max(0, match.Groups[0].Index))),
+                                MatchedPositionInContext = match.Groups[2].Index - match.Index,
+                                MatchedPositionInFile = nowPositionByte + deltaIndexByte
+                            });
+                        }
+                    }
+
+                    //nowPositionString += res.Length / 2;
+                    nowPositionByte += blockSize / 2;
+                }
+                
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            
+        }
+
+
+        ///// <summary>
+        ///// 这是以key的二进制形式去搜索，所以不支持regex
+        ///// </summary>
+        ///// <param name="key"></param>
+        ///// <param name="pageSize"></param>
+        ///// <param name="searchMaxResult"></param>
+        ///// <param name="report"></param>
+        ///// <returns></returns>
+        //public async Task SearchAsync(string key, int pageSize, int searchMaxResult, sendSearchResultEvent report)
+        //{
+        //    try
+        //    {
+        //        int resultCount = 0;
+        //        byte[] keyb = TextEncoding.GetBytes(key);
+        //        //List<SearchItem> res = new List<SearchItem>();
+
+        //        using (FileStream fs = new FileStream(Path, FileMode.Open, FileAccess.Read))
+        //        {
+        //            long nowPosition = 0;
+        //            int blockSize = 1024 * 1024 * 60;
+        //            byte[] block = new byte[blockSize];
+        //            do
+        //            {
+        //                fs.Seek(nowPosition, SeekOrigin.Begin);
+        //                fs.Read(block, 0, blockSize);
+        //                if (Size - nowPosition < blockSize) for (long i = Size - nowPosition; i < blockSize; i++) block[i] = 0;
+        //                bool find = false;
+        //                for (int i = 0; i < blockSize - keyb.Length; i++)
+        //                {
+        //                    bool allsame = true;
+        //                    for (int j = 0; j < keyb.Length; j++)
+        //                    {
+        //                        if (keyb[j] != block[i + j])
+        //                        {
+        //                            allsame = false;
+        //                            break;
+        //                        }
+        //                    }
+        //                    if (allsame)
+        //                    {
+        //                        int tbegin = Math.Max(0, i - 12);
+        //                        int tcount = Math.Min(block.Length - tbegin, keyb.Length + 24);
+        //                        string context = TextEncoding.GetString(block, tbegin, tcount).Replace("\0", " ");
+        //                        long MatchPosition = nowPosition + i;
+        //                        //int pageNum = (int)((double)MatchPosition / pageSize);
+        //                        var item = new SearchResult
+        //                        {
+        //                            FileInfo=this._fileInfo,
+        //                            MatchedContext = context,
+        //                            MatchedPositionInFile = MatchPosition,
+                                    
+        //                        };
+        //                        report(item);
+        //                        resultCount++;
+        //                        if (resultCount > searchMaxResult) return;
+        //                        //break;
+        //                    }
+        //                }
+        //                //Print(string.Format("{0}/{1},{2:N}%,{3}", nowPosition, filelen, (double)nowPosition * 100 / filelen, res.Count));
+        //                //if (res.Count <= searchMaxResult || nowPosition == 0)
+        //                //{
+        //                //    //ShowSearchResult(res);
+        //                //}
+
+        //                nowPosition += (int)(0.95 * blockSize);
+        //            } while (nowPosition < Size);
+        //        }
+        //        //Print(string.Format("{0}个结果。{1}", res.Count, res.Count > searchMaxResult ? string.Format("前{0}个如下", searchMaxResult) : ""));
+        //        ///ShowSearchResult(res);
+
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine(e);
+        //    }
+        //}
 
         public void Dispose()
         {

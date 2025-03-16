@@ -38,6 +38,88 @@ namespace BigFileBrowser
 
 
         /// <summary>
+        /// 寻找最初的字符边界偏移值
+        /// </summary>
+        /// <param name="encoding"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        public static int FindCharacterBoundary(Encoding encoding, byte[] data)
+        {
+            if (encoding == null || data == null) return 0;
+            if (encoding.WebName == "utf-8") return FindFirstValidCharacterBoundaryUtf8(data);
+            else if (encoding.WebName == "utf-16") return FindFirstValidCharacterBoundaryUtf16(data);
+            else if(encoding.WebName=="gb2312")return FindFirstValidCharacterBoundaryGb2312(data);
+            else return 0; 
+        }
+
+        public static int FindFirstValidCharacterBoundaryUtf8(byte[] bytes)
+        {
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                byte b = bytes[i];
+                if ((b & 0x80) == 0) // 单字节字符
+                {
+                    return i;
+                }
+                else if ((b & 0xE0) == 0xC0) // 双字节字符的起始字节
+                {
+                    if (i + 1 < bytes.Length && (bytes[i + 1] & 0xC0) == 0x80)
+                    {
+                        return i;
+                    }
+                }
+                else if ((b & 0xF0) == 0xE0) // 三字节字符的起始字节
+                {
+                    if (i + 2 < bytes.Length && (bytes[i + 1] & 0xC0) == 0x80 && (bytes[i + 2] & 0xC0) == 0x80)
+                    {
+                        return i;
+                    }
+                }
+                else if ((b & 0xF8) == 0xF0) // 四字节字符的起始字节
+                {
+                    if (i + 3 < bytes.Length && (bytes[i + 1] & 0xC0) == 0x80 && (bytes[i + 2] & 0xC0) == 0x80 && (bytes[i + 3] & 0xC0) == 0x80)
+                    {
+                        return i;
+                    }
+                }
+            }
+
+            return 0; // 没有找到合法的字符边界
+        }
+
+        public static int FindFirstValidCharacterBoundaryUtf16(byte[] bytes)
+        {
+            for (int i = 0; i < bytes.Length; i += 2)
+            {
+                if (i + 1 >= bytes.Length)
+                {
+                    break; // 没有足够的字节组成一个 UTF-16 字符
+                }
+
+                // 检查是否是合法的 UTF-16 字符
+                ushort codeUnit = (ushort)((bytes[i] << 8) | bytes[i + 1]);
+                if ((codeUnit & 0xFC00) != 0xDC00) // 不是代理对的后半部分
+                {
+                    return i;
+                }
+            }
+
+            return 0; // 没有找到合法的字符边界
+        }
+
+        public static int FindFirstValidCharacterBoundaryGb2312(byte[] bytes)
+        {
+            var startIndex = 0;
+            string tmp0 = Encoding.GetEncoding("gb2312").GetString(bytes, 0, Math.Min(100, bytes.Length));
+            string tmp1 = Encoding.GetEncoding("gb2312").GetString(bytes, 1, Math.Min(100, bytes.Length));
+
+            if (getCommonHanNum(tmp1) > getCommonHanNum(tmp0)) startIndex = 1;
+
+            return startIndex;
+
+        }
+
+        /// <summary>
         /// 统计汉字个数
         /// </summary>
         /// <param name="str"></param>

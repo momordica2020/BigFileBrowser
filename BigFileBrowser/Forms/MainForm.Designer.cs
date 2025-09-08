@@ -33,18 +33,18 @@
             button3 = new MaterialSkin.Controls.MaterialButton();
             label4 = new MaterialSkin.Controls.MaterialLabel();
             listView1 = new MaterialSkin.Controls.MaterialListView();
-            text = new System.Windows.Forms.ColumnHeader();
             num = new System.Windows.Forms.ColumnHeader();
+            text = new System.Windows.Forms.ColumnHeader();
             textBox3 = new MaterialSkin.Controls.MaterialTextBox();
             tabControl1 = new MaterialSkin.Controls.MaterialTabControl();
             tabPage1 = new System.Windows.Forms.TabPage();
+            SliderPage = new System.Windows.Forms.TrackBar();
             ButtonSearchInPage = new MaterialSkin.Controls.MaterialButton();
             NumericPage = new System.Windows.Forms.NumericUpDown();
             TextBoxSearchInPage = new MaterialSkin.Controls.MaterialTextBox();
             ComboBoxEncodings = new MaterialSkin.Controls.MaterialComboBox();
             SwitchAutoWordwarp = new MaterialSkin.Controls.MaterialSwitch();
             LabelFilePath = new MaterialSkin.Controls.MaterialLabel();
-            SliderPage = new MaterialSkin.Controls.MaterialSlider();
             materialLabel1 = new MaterialSkin.Controls.MaterialLabel();
             ComboBoxPageSize = new MaterialSkin.Controls.MaterialComboBox();
             TextBoxPageContent = new MaterialSkin.Controls.MaterialMultiLineTextBox();
@@ -67,6 +67,7 @@
             toolStripStatusLabel1 = new System.Windows.Forms.ToolStripStatusLabel();
             tabControl1.SuspendLayout();
             tabPage1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)SliderPage).BeginInit();
             ((System.ComponentModel.ISupportInitialize)NumericPage).BeginInit();
             tabPage2.SuspendLayout();
             tabPage3.SuspendLayout();
@@ -126,7 +127,7 @@
             label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             label4.MouseState = MaterialSkin.MouseState.HOVER;
             label4.Name = "label4";
-            label4.Size = new System.Drawing.Size(81, 19);
+            label4.Size = new System.Drawing.Size(76, 19);
             label4.TabIndex = 11;
             label4.Text = "全文搜索：";
             // 
@@ -136,7 +137,7 @@
             listView1.AutoSizeTable = false;
             listView1.BackColor = System.Drawing.Color.FromArgb(255, 255, 255);
             listView1.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            listView1.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { text, num });
+            listView1.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { num, text });
             listView1.Depth = 0;
             listView1.Font = new System.Drawing.Font("Microsoft YaHei UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 134);
             listView1.FullRowSelect = true;
@@ -152,15 +153,16 @@
             listView1.UseCompatibleStateImageBehavior = false;
             listView1.View = System.Windows.Forms.View.Details;
             listView1.SelectedIndexChanged += listView1_SelectedIndexChanged;
+            listView1.SizeChanged += listView1_SizeChanged;
+            // 
+            // num
+            // 
+            num.Text = "页数";
             // 
             // text
             // 
             text.Text = "文本";
             text.Width = 300;
-            // 
-            // num
-            // 
-            num.Text = "页数";
             // 
             // textBox3
             // 
@@ -202,13 +204,13 @@
             // 
             // tabPage1
             // 
+            tabPage1.Controls.Add(SliderPage);
             tabPage1.Controls.Add(ButtonSearchInPage);
             tabPage1.Controls.Add(NumericPage);
             tabPage1.Controls.Add(TextBoxSearchInPage);
             tabPage1.Controls.Add(ComboBoxEncodings);
             tabPage1.Controls.Add(SwitchAutoWordwarp);
             tabPage1.Controls.Add(LabelFilePath);
-            tabPage1.Controls.Add(SliderPage);
             tabPage1.Controls.Add(materialLabel1);
             tabPage1.Controls.Add(ComboBoxPageSize);
             tabPage1.Controls.Add(TextBoxPageContent);
@@ -219,6 +221,16 @@
             tabPage1.TabIndex = 0;
             tabPage1.Text = "文件内容";
             tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // SliderPage
+            // 
+            SliderPage.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            SliderPage.Location = new System.Drawing.Point(17, 123);
+            SliderPage.Name = "SliderPage";
+            SliderPage.Size = new System.Drawing.Size(1087, 45);
+            SliderPage.TabIndex = 27;
+            SliderPage.TabStop = false;
+            SliderPage.Scroll += trackBar1_Scroll;
             // 
             // ButtonSearchInPage
             // 
@@ -243,6 +255,7 @@
             // 
             // NumericPage
             // 
+            NumericPage.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right;
             NumericPage.BorderStyle = System.Windows.Forms.BorderStyle.None;
             NumericPage.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
             NumericPage.Location = new System.Drawing.Point(1023, 90);
@@ -304,7 +317,7 @@
             SwitchAutoWordwarp.MouseState = MaterialSkin.MouseState.HOVER;
             SwitchAutoWordwarp.Name = "SwitchAutoWordwarp";
             SwitchAutoWordwarp.Ripple = true;
-            SwitchAutoWordwarp.Size = new System.Drawing.Size(122, 37);
+            SwitchAutoWordwarp.Size = new System.Drawing.Size(118, 37);
             SwitchAutoWordwarp.TabIndex = 22;
             SwitchAutoWordwarp.Text = "自动换行";
             SwitchAutoWordwarp.UseVisualStyleBackColor = true;
@@ -318,26 +331,9 @@
             LabelFilePath.Location = new System.Drawing.Point(17, 15);
             LabelFilePath.MouseState = MaterialSkin.MouseState.HOVER;
             LabelFilePath.Name = "LabelFilePath";
-            LabelFilePath.Size = new System.Drawing.Size(81, 19);
+            LabelFilePath.Size = new System.Drawing.Size(76, 19);
             LabelFilePath.TabIndex = 21;
             LabelFilePath.Text = "文件路径：";
-            // 
-            // SliderPage
-            // 
-            SliderPage.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
-            SliderPage.Depth = 0;
-            SliderPage.Font = new System.Drawing.Font("Microsoft Sans Serif", 14F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Pixel);
-            SliderPage.ForeColor = System.Drawing.Color.FromArgb(222, 0, 0, 0);
-            SliderPage.Location = new System.Drawing.Point(17, 123);
-            SliderPage.MouseState = MaterialSkin.MouseState.HOVER;
-            SliderPage.Name = "SliderPage";
-            SliderPage.Size = new System.Drawing.Size(1087, 40);
-            SliderPage.TabIndex = 20;
-            SliderPage.Text = "";
-            SliderPage.UseAccentColor = true;
-            SliderPage.Value = 0;
-            SliderPage.ValueSuffix = "页";
-            SliderPage.onValueChanged += FIleSlider_onValueChanged;
             // 
             // materialLabel1
             // 
@@ -347,7 +343,7 @@
             materialLabel1.Location = new System.Drawing.Point(170, 62);
             materialLabel1.MouseState = MaterialSkin.MouseState.HOVER;
             materialLabel1.Name = "materialLabel1";
-            materialLabel1.Size = new System.Drawing.Size(113, 19);
+            materialLabel1.Size = new System.Drawing.Size(106, 19);
             materialLabel1.TabIndex = 19;
             materialLabel1.Text = "每次显示字符：";
             // 
@@ -383,11 +379,11 @@
             TextBoxPageContent.Depth = 0;
             TextBoxPageContent.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, 0);
             TextBoxPageContent.ForeColor = System.Drawing.Color.FromArgb(222, 0, 0, 0);
-            TextBoxPageContent.Location = new System.Drawing.Point(17, 169);
+            TextBoxPageContent.Location = new System.Drawing.Point(17, 174);
             TextBoxPageContent.MouseState = MaterialSkin.MouseState.HOVER;
             TextBoxPageContent.Name = "TextBoxPageContent";
             TextBoxPageContent.ReadOnly = true;
-            TextBoxPageContent.Size = new System.Drawing.Size(1087, 455);
+            TextBoxPageContent.Size = new System.Drawing.Size(1087, 450);
             TextBoxPageContent.TabIndex = 17;
             TextBoxPageContent.Text = "";
             // 
@@ -429,7 +425,7 @@
             label5.Location = new System.Drawing.Point(32, 80);
             label5.MouseState = MaterialSkin.MouseState.HOVER;
             label5.Name = "label5";
-            label5.Size = new System.Drawing.Size(49, 19);
+            label5.Size = new System.Drawing.Size(46, 19);
             label5.TabIndex = 21;
             label5.Text = "关键字";
             // 
@@ -441,7 +437,7 @@
             label2.Location = new System.Drawing.Point(32, 16);
             label2.MouseState = MaterialSkin.MouseState.HOVER;
             label2.Name = "label2";
-            label2.Size = new System.Drawing.Size(33, 19);
+            label2.Size = new System.Drawing.Size(31, 19);
             label2.TabIndex = 20;
             label2.Text = "路径";
             // 
@@ -532,17 +528,17 @@
             // columnHeader1
             // 
             columnHeader1.Text = "文件";
-            columnHeader1.Width = 300;
+            columnHeader1.Width = 350;
             // 
             // columnHeader2
             // 
-            columnHeader2.Text = "内容";
-            columnHeader2.Width = 300;
+            columnHeader2.Text = "位置";
+            columnHeader2.Width = 100;
             // 
             // columnHeader3
             // 
-            columnHeader3.Text = "位置";
-            columnHeader3.Width = 100;
+            columnHeader3.Text = "内容";
+            columnHeader3.Width = 300;
             // 
             // materialTabSelector1
             // 
@@ -618,6 +614,7 @@
             tabControl1.ResumeLayout(false);
             tabPage1.ResumeLayout(false);
             tabPage1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)SliderPage).EndInit();
             ((System.ComponentModel.ISupportInitialize)NumericPage).EndInit();
             tabPage2.ResumeLayout(false);
             tabPage2.PerformLayout();
@@ -660,7 +657,6 @@
         private MaterialSkin.Controls.MaterialMultiLineTextBox TextBoxPageContent;
         private MaterialSkin.Controls.MaterialComboBox ComboBoxPageSize;
         private MaterialSkin.Controls.MaterialLabel materialLabel1;
-        private MaterialSkin.Controls.MaterialSlider SliderPage;
         private MaterialSkin.Controls.MaterialSwitch SwitchAutoWordwarp;
         private MaterialSkin.Controls.MaterialLabel LabelFilePath;
         private MaterialSkin.Controls.MaterialComboBox ComboBoxEncodings;
@@ -669,6 +665,7 @@
         private System.Windows.Forms.NumericUpDown NumericPage;
         private MaterialSkin.Controls.MaterialButton ButtonSearchInPage;
         private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.TrackBar SliderPage;
     }
 }
 

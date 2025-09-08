@@ -245,13 +245,13 @@ namespace BigFileBrowser
                 PageNum = (int)Math.Ceiling((double)file.Size / PageSize);
                 int RangeMax = Math.Max(1, PageNum - 1);
                 PageIndex = Math.Min(pageIndex, RangeMax);
-                SliderPage.Enabled = false;
+                //SliderPage.Enabled = false;
                 NumericPage.Enabled = false;
 
                 NumericPage.Maximum = RangeMax;
                 NumericPage.Value = PageIndex;
 
-                SliderPage.RangeMax = RangeMax;
+                SliderPage.Maximum = RangeMax;
                 SliderPage.Value = PageIndex;
 
                 if (RangeMax <= 1)
@@ -284,12 +284,12 @@ namespace BigFileBrowser
             if (file == null) return;
             Invoke(() =>
             {
-                
-                    int pageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
-                    int beginNum = SliderPage.Value;
-                    long beginindex = beginNum * pageSize;
-                    string pageContent = file.ReadTextAsync(beginindex, pageSize).Result;
-                    ShowTextToMainTextbox(pageContent);
+
+                int pageSize = int.Parse(ComboBoxPageSize.SelectedItem.ToString());
+                int beginNum = SliderPage.Value;
+                long beginindex = beginNum * pageSize;
+                string pageContent = file.ReadTextAsync(beginindex, pageSize).Result;
+                ShowTextToMainTextbox(pageContent);
             });
 
         }
@@ -387,7 +387,7 @@ namespace BigFileBrowser
                 if (listView1.Items.Count >= searchMaxResult) return;
                 PrintStatus($"{result.MatchedPositionInFile}/{file.Size},{((double)result.MatchedPositionInFile / file.Size):N}%,{listView1.Items.Count}");
                 var pageIndex = result.MatchedPositionInFile / PageSize;
-                var item = new ListViewItem(new string[] { result.MatchedContext, pageIndex.ToString() });
+                var item = new ListViewItem(new string[] { pageIndex.ToString(), result.MatchedContext, });
                 item.Tag = result;
                 listView1.Items.Add(item);
                 listView1.Show();
@@ -399,6 +399,13 @@ namespace BigFileBrowser
                 //listView1.Show();
             });
         }
+        public string TruncateString(string input, int headLength = 15, int tailLength = 20)
+        {
+            if (string.IsNullOrEmpty(input) || input.Length <= headLength + tailLength)
+                return input;
+
+            return input.Substring(0, headLength) + "..." + input.Substring(input.Length - tailLength);
+        }
 
         /// <summary>
         /// 文件夹搜索结果
@@ -409,9 +416,9 @@ namespace BigFileBrowser
             Invoke(() =>
             {
                 var item = new ListViewItem(new[] {
-                    result.FileInfo.FullName,
+                    TruncateString(result.FileInfo.FullName),
+                    result.MatchedPositionInFile.ToString(),
                     result.MatchedContext,
-                    result.MatchedPositionInFile.ToString()
                 });
                 item.Tag = result;
                 listView2.Items.Add(item);
@@ -482,8 +489,8 @@ namespace BigFileBrowser
                 });
 
             });
-            
-            
+
+
         }
 
 
@@ -534,11 +541,6 @@ namespace BigFileBrowser
             UpdatePage(SliderPage.Value);
         }
 
-        private void FIleSlider_onValueChanged(object sender, int newValue)
-        {
-            if (SliderPage.Enabled == false) return;
-            UpdatePage(SliderPage.Value);
-        }
 
         private void 打开ToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -639,8 +641,9 @@ namespace BigFileBrowser
         private void TextBoxSearchInPage_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
-            { SearchInPage();
-               
+            {
+                SearchInPage();
+
             }
         }
 
@@ -649,6 +652,20 @@ namespace BigFileBrowser
             if (e.KeyCode == Keys.Enter)
             {
                 SearchInDictionary();
+            }
+        }
+
+        private void trackBar1_Scroll(object sender, EventArgs e)
+        {
+            if (SliderPage.Enabled == false) return;
+            UpdatePage(SliderPage.Value);
+        }
+
+        private void listView1_SizeChanged(object sender, EventArgs e)
+        {
+            if (listView1.Columns.Count > 0)
+            {
+                listView1.Columns[listView1.Columns.Count - 1].Width = -2;
             }
         }
     }

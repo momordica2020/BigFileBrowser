@@ -30,10 +30,10 @@ namespace BigFileBrowser
             Encodings.Add(Encoding.UTF8);
             Encodings.Add(Encoding.GetEncoding("gb2312"));
 
-            foreach (var encoding in Encoding.GetEncodings())
-            {
-                if(!Encodings.Contains(encoding.GetEncoding())) Encodings.Add(encoding.GetEncoding());
-            }
+            //foreach (var encoding in Encoding.GetEncodings())
+            //{
+            //    if(!Encodings.Contains(encoding.GetEncoding())) Encodings.Add(encoding.GetEncoding());
+            //}
         }
 
 
